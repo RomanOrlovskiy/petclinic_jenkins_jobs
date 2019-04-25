@@ -1,0 +1,77 @@
+pipeline {
+
+  environment {
+    registry = "414831080620.dkr.ecr.us-west-2.amazonaws.com/petclinic"
+    registryCredential = "dockerhub-account"
+    dockerImage = ""
+    applicationVersion = ""
+  }
+
+  //Using dynamic nodes from EC2 plugin
+  agent {
+      label "centos"
+  }
+
+  tools {
+        maven 'Maven 3.6.0'
+  }
+
+  stages {
+
+    //Retrieve updated code in the application, build it and deploy the image to my dockerhub account
+    stage('Cloning Git repo') {
+      steps {
+        git branch: 'master', url: 'https://github.com/RomanOrlovskiy/spring-petclinic.git'
+      }
+    }
+
+    stage ('Initialize') {
+        steps {
+            sh '''
+                echo "PATH = ${PATH}"
+                echo "M2_HOME = ${M2_HOME}"
+            '''
+        }
+    }
+
+    stage ('Build artifact') {
+        steps {
+            ansiColor('xterm') {
+                sh 'mvn clean package'
+                applicationVersion = sh(returnStdout: true, script: 'mvn help:evaluate -Dexpression=project.version -q -DforceStdout').trim()
+            }
+        }
+    }
+
+    stage('Building image') {
+      steps{
+        script {
+          dockerImage = docker.build registry + ":$applicationVersion.$BUILD_NUMBER"
+        }
+      }
+    }
+
+    stage('Deploy Image') {
+      steps{
+         script {
+            docker.withRegistry( '', registryCredential ) {
+            dockerImage.push()
+          }
+        }
+      }
+    }
+
+    stage('Remove Unused docker image') {
+      steps{
+        sh "docker rmi $registry:$applicationVersion.$BUILD_NUMBER"
+      }
+    }
+
+    stage('Tag git commit') {
+      steps{
+        sh "git tag v$applicationVersion.$BUILD_NUMBER"
+        sh "git push origin --tags"
+      }
+    }
+  }
+}

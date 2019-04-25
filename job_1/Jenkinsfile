@@ -4,7 +4,6 @@ pipeline {
     registry = "414831080620.dkr.ecr.us-west-2.amazonaws.com/petclinic"
     registryCredential = "ecr:us-west-2:8c44426e-71c9-4441-9b97-ebc0a69c881f" //lab_jenkins_cli user
     dockerImage = ""
-    applicationVersion = ""
   }
 
   //Using dynamic nodes from EC2 plugin
@@ -38,7 +37,7 @@ pipeline {
         steps {
             ansiColor('xterm') {
                 sh 'mvn clean package'
-                applicationVersion = sh(returnStdout: true, script: 'mvn help:evaluate -Dexpression=project.version -q -DforceStdout')
+                def applicationVersion = sh(returnStdout: true, script: 'mvn help:evaluate -Dexpression=project.version -q -DforceStdout').trim()
             }
         }
     }

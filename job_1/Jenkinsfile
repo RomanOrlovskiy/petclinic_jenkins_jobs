@@ -20,7 +20,9 @@ pipeline {
     //Retrieve updated code in the application, build it and deploy the image to my dockerhub account
     stage('Cloning Git repo') {
       steps {
-        git branch: 'master', url: 'https://github.com/RomanOrlovskiy/spring-petclinic.git'
+          sshagent (credentials: ['464b0ae2-8c8a-4c41-9b8e-c34b1f5e76c5']) {
+                    git branch: 'master', url: 'git@github.com:RomanOrlovskiy/spring-petclinic.git', credentialsId: '464b0ae2-8c8a-4c41-9b8e-c34b1f5e76c5'
+            }
       }
     }
 
@@ -37,7 +39,9 @@ pipeline {
         steps {
             ansiColor('xterm') {
                 sh 'mvn clean package'
-                def applicationVersion = sh(returnStdout: true, script: 'mvn help:evaluate -Dexpression=project.version -q -DforceStdout').trim()
+            }
+            script{
+                applicationVersion = sh(returnStdout: true, script: 'mvn help:evaluate -Dexpression=project.version -q -DforceStdout').trim()
             }
         }
     }
@@ -45,7 +49,7 @@ pipeline {
     stage('Building image') {
       steps{
         script {
-          dockerImage = docker.build registry + ":$applicationVersion.$BUILD_NUMBER"
+          dockerImage = docker.build registry + ":${applicationVersion}.${BUILD_NUMBER}"
         }
       }
     }
@@ -53,7 +57,7 @@ pipeline {
     stage('Deploy Image') {
       steps{
          script {
-            docker.withRegistry( '', registryCredential ) {
+            docker.withRegistry( "https://$registry", registryCredential ) {
             dockerImage.push()
           }
         }
@@ -68,8 +72,11 @@ pipeline {
 
     stage('Tag git commit') {
       steps{
-        sh "git tag v$applicationVersion.$BUILD_NUMBER"
-        sh "git push origin --tags"
+          sshagent (credentials: ['464b0ae2-8c8a-4c41-9b8e-c34b1f5e76c5']) {
+                    sh "git tag v$applicationVersion.$BUILD_NUMBER"
+                    sh "git push origin v$applicationVersion.$BUILD_NUMBER"
+                }
+
       }
     }
   }

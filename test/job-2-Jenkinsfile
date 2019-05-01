@@ -1,0 +1,42 @@
+pipeline {
+    agent any
+
+    environment {
+        imageVersion = ""
+        stackName = "epam-phase3-stack"
+    }
+
+    parameters {
+        gitParameter name: 'TAG',
+                     type: 'PT_TAG',
+                     defaultValue: 'master'
+    }
+    stages {
+        stage('Checkout Git repo') {
+            steps {
+                sshagent (credentials: ['464b0ae2-8c8a-4c41-9b8e-c34b1f5e76c5']) {
+                    checkout([$class: 'GitSCM',
+                          branches: [[name: "${params.TAG}"]],
+                          doGenerateSubmoduleConfigurations: false,
+                          extensions: [],
+                          gitTool: 'Default',
+                          submoduleCfg: [],
+                          userRemoteConfigs: [[url: 'git@github.com:RomanOrlovskiy/spring-petclinic.git',
+                            credentialsId: '464b0ae2-8c8a-4c41-9b8e-c34b1f5e76c5']]
+                    ])
+                }
+
+            }
+        }
+
+        stage ('Change app version') {
+            steps {
+                script {
+                    //parse selected git tag to remove the initial character 'v'
+                    imageVersion = params.TAG[0] != "v" ? params.TAG : params.TAG.substring(1, params.TAG.length())
+                }
+                sh "aws cloudformation update-stack --stack-name ${stackName} --use-previous-template --parameters ParameterKey=ImageVersion,ParameterValue=${imageVersion}"
+            }
+        }
+    }
+}

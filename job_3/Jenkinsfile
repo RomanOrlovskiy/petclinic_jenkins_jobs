@@ -1,0 +1,21 @@
+pipeline {
+    agent any
+
+    environment {
+        imageVersion = ""
+        stackName = "epam-phase3-stack"
+    }
+
+    stages {
+
+        stage ('Change app version') {
+            steps {
+                script {
+                    //parse selected git tag to remove the initial character 'v'
+                    imageVersion = params.TAG[0] != "v" ? params.TAG : params.TAG.substring(1, params.TAG.length())
+                }
+                sh "aws cloudformation update-stack --stack-name ${stackName} --use-previous-template --parameters ParameterKey=ImageVersion,ParameterValue=${imageVersion}"
+            }
+        }
+    }
+}

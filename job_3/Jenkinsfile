@@ -18,43 +18,30 @@ pipeline {
           }
         }
 
-        stage ('Validate syntax') {
+        stage ('Validate/Lint templates') {
             steps {
                 script{
-                    //Find all .yaml files and validate their syntax
-                    def  FILES_LIST = sh (script: "find . -name '*.yaml'", returnStdout: true).trim()
-                    for(String file : FILES_LIST.split("\\r?\\n")){
-                        println sh(script: "aws cloudformation validate-template --template-body file://${file}", returnStdout: true)
-                    }
-                }
 
-            }
-        }
+                  def SCRIPTS_LIST = sh (script: "find ./tests/*.sh", returnStdout: true).trim()
+                  for(String script : SCRIPTS_LIST.split("\\r?\\n")){
 
-        stage ('cfn-lint') {
-            steps {
-                script {
-                    println sh(script: "/usr/bin/cfn-lint `find . -name '*.yaml'` --ignore-checks W2509", returnStdout: true)
-                }
-            }
-        }
+                      def status = sh (script: "${script} > output.txt", returnStatus: true)
+                      println readFile('output.txt').trim()
 
-        //Ask for user confirmation to continue the deployment
+                      if (status != 0) {
+                        currentBuild.result = "FAILED"
+                        error "Tests in script ${script} failed"
+                      }
+                      sh 'rm output.txt'
 
-        stage('Decide on stack deployment') {
-          steps {
-            script {
-              env.DEPLOY_STACK = input message: 'User input required',
-                  parameters: [choice(name: 'Deploy stack to AWS', choices: 'no\nyes', description: 'Choose "yes" if you want to deploy this stack')]
-            }
+                  }
+
+              }
           }
         }
 
 
         stage ('Copy templates to S3 bucket') {
-            when {
-                environment name: 'DEPLOY_STACK', value: 'yes'
-            }
             steps {
                 println "Copying to S3"
                 sh "aws s3 cp . ${bucketName} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers --recursive --exclude '.git/*'"
@@ -64,9 +51,6 @@ pipeline {
 
 
         stage ('Deploy cfn template in AWS') {
-            when {
-                environment name: 'DEPLOY_STACK', value: 'yes'
-            }
             steps {
                 println "Deploying the stack ${stackName}..."
                 sh "aws cloudformation deploy --stack-name ${stackName} --template-file ${templateFile} --capabilities CAPABILITY_NAMED_IAM"

@@ -40,3 +40,11 @@ pipeline {
         }
     }
 }
+
+
+/*
+def gettags = ("git ls-remote -t https://github.com/RomanOrlovskiy/spring-petclinic.git").execute()
+return gettags.text.readLines().collect {
+  it.split()[1].replaceAll('refs/tags/', '').replaceAll("\\^\\{\\}", '')
+}
+*/

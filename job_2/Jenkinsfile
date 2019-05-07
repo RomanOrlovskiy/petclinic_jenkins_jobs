@@ -5,7 +5,7 @@ pipeline {
         imageVersion = ""
         infrastructureStackName = "epam-phase3-stack"
         stackName = "petclinic-service-stack"
-        serviceTemplateUrl = "services/petclinic-service/service.yaml"
+        serviceTemplate = "services/petclinic-service/service.yaml"
     }
 
     stages {
@@ -26,7 +26,7 @@ pipeline {
                 }
                 //sh "aws cloudformation update-stack --stack-name ${infrastructureStackName} --use-previous-template --parameters ParameterKey=ImageVersion,ParameterValue=${imageVersion}"
                 println "Deploying the stack ${stackName}..."
-                sh "aws cloudformation deploy --stack-name ${stackName} --template-file ${serviceTemplateUrl} --capabilities CAPABILITY_NAMED_IAM --parameter-overrides ParameterKey=ImageVersion,ParameterValue=${imageVersion} ParameterKey=InfrastructureStackName, ParameterValue=${infrastructureStackName}"
+                sh "aws cloudformation deploy --stack-name ${stackName} --template-file ${serviceTemplate} --capabilities CAPABILITY_NAMED_IAM --parameter-overrides ParameterKey=ImageVersion,ParameterValue=${imageVersion} ParameterKey=InfrastructureStackName, ParameterValue=${infrastructureStackName}"
             }
         }
     }

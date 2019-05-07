@@ -5,10 +5,18 @@ pipeline {
         imageVersion = ""
         infrastructureStackName = "epam-phase3-stack"
         stackName = "petclinic-service-stack"
-        templateFile = "services/petclinic-service/service.yaml"
+        serviceTemplateUrl = "services/petclinic-service/service.yaml"
     }
 
     stages {
+
+        stage('Cloning Git repo') {
+          steps {
+              sshagent (credentials: ['464b0ae2-8c8a-4c41-9b8e-c34b1f5e76c5']) {
+                        git branch: 'master', url: 'git@github.com:RomanOrlovskiy/aws-cfn-petclinic.git', credentialsId: '464b0ae2-8c8a-4c41-9b8e-c34b1f5e76c5'
+                }
+          }
+        }
 
         stage ('Change app version') {
             steps {
@@ -18,7 +26,7 @@ pipeline {
                 }
                 //sh "aws cloudformation update-stack --stack-name ${infrastructureStackName} --use-previous-template --parameters ParameterKey=ImageVersion,ParameterValue=${imageVersion}"
                 println "Deploying the stack ${stackName}..."
-                sh "aws cloudformation deploy --stack-name ${stackName} --template-file ${templateFile} --capabilities CAPABILITY_NAMED_IAM --parameter-overrides ParameterKey=ImageVersion,ParameterValue=${imageVersion} ParameterKey=InfrastructureStackName, ParameterValue=${infrastructureStackName}"
+                sh "aws cloudformation deploy --stack-name ${stackName} --template-file ${serviceTemplateUrl} --capabilities CAPABILITY_NAMED_IAM --parameter-overrides ParameterKey=ImageVersion,ParameterValue=${imageVersion} ParameterKey=InfrastructureStackName, ParameterValue=${infrastructureStackName}"
             }
         }
     }

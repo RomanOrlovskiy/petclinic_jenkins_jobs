@@ -3,7 +3,9 @@ pipeline {
 
     environment {
         imageVersion = ""
-        stackName = "epam-phase3-stack"
+        infrastructureStackName = "epam-phase3-stack"
+        stackName = "petclinic-service-stack"
+        templateFile = "services/petclinic-service/service.yaml"
     }
 
     stages {
@@ -14,7 +16,9 @@ pipeline {
                     //parse selected git tag to remove the initial character 'v'
                     imageVersion = params.TAG[0] != "v" ? params.TAG : params.TAG.substring(1, params.TAG.length())
                 }
-                sh "aws cloudformation update-stack --stack-name ${stackName} --use-previous-template --parameters ParameterKey=ImageVersion,ParameterValue=${imageVersion}"
+                //sh "aws cloudformation update-stack --stack-name ${infrastructureStackName} --use-previous-template --parameters ParameterKey=ImageVersion,ParameterValue=${imageVersion}"
+                println "Deploying the stack ${stackName}..."
+                sh "aws cloudformation deploy --stack-name ${stackName} --template-file ${templateFile} --capabilities CAPABILITY_NAMED_IAM --parameter-overrides ParameterKey=ImageVersion,ParameterValue=${imageVersion} ParameterKey=InfrastructureStackName, ParameterValue=${infrastructureStackName}"
             }
         }
     }

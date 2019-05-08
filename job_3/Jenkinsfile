@@ -5,6 +5,10 @@ pipeline {
         bucketName = "s3://epam-phase3-aws-cfn-petclinic"
         stackName = "epam-phase3-stack"
         templateFile = "master.yaml"
+        albEndpoint = ""
+        hostedZone = "Z2LRPVRK54W3FS"
+        stackOutputName = "PetclinicServiceUrl"
+        dnsRecordTemplate = "tests/record.json"
     }
 
     stages {
@@ -54,6 +58,20 @@ pipeline {
             steps {
                 println "Deploying the stack ${stackName}..."
                 sh "aws cloudformation deploy --stack-name ${stackName} --template-file ${templateFile} --capabilities CAPABILITY_NAMED_IAM"
+            }
+        }
+
+        stage ('Point subdomain to ALB endpoint'){
+            steps {
+                script {
+                    //retrieve ALB URL from the stack
+                    albEndpoint = sh (script: "aws cloudformation describe-stacks --stack-name ${stackName} --query 'Stacks[0].Outputs[?OutputKey==`${stackOutputName}`].OutputValue' --output text | sed 's;https://;;g'", returnStdout: true).trim()
+                    //update json file with the new ALB URL
+                    sh "sed -i 's/{ALB_URL_PLACEHOLDER}/dualstack.${albEndpoint}/g' ${dnsRecordTemplate}"
+
+                    println "Updating subdomain to point to the ALB endpoint ${albEndpoint}..."
+                    sh "aws route53 change-resource-record-sets --hosted-zone-id ${hostedZone} --change-batch file://${dnsRecordTemplate} 2>&1 > /dev/null"
+                }
             }
         }
 

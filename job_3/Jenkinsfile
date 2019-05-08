@@ -25,7 +25,7 @@ pipeline {
                   def SCRIPTS_LIST = sh (script: "find ./tests/*.sh", returnStdout: true).trim()
                   for(String script : SCRIPTS_LIST.split("\\r?\\n")){
 
-                      def status = sh (script: "${script} > output.txt", returnStatus: true)
+                      def status = sh (script: "${script} &> output.txt", returnStatus: true)
                       println readFile('output.txt').trim()
 
                       if (status != 0) {

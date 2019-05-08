@@ -22,7 +22,7 @@ pipeline {
             steps {
                 script{
 
-                  def infra_stack_status = sh (script: "aws cloudformation describe-stacks --stack-name ${infrastructureStackName} &> output.txt", returnStatus: true)
+                  def infra_stack_status = sh (script: "aws cloudformation describe-stacks --stack-name ${infrastructureStackName} 2> output.txt > /dev/null", returnStatus: true)
 
                   println readFile('output.txt').trim()
 
